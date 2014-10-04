@@ -1,0 +1,82 @@
+; ModuleID = "binSearch.llvm"
+declare i32 @printf(i8*,...)					; export the prototype of printf
+
+@msg = constant [9 x i8]  c"got: %d\0A\00"
+@data = constant [10 x i32] [i32 10,i32 11,i32 12,i32 13,i32 14,i32 15,i32 16,i32 17,i32 18,i32 19]
+
+define i32 @binSearch(i32* %tab,i32 %n,i32 %k) {
+
+validate:
+	%check = call i1 @validateKey(i32* %tab, i32 %n, i32 %k)	; returns 0 if valid, 1 if invalid
+	br i1 %check, label %invalid, label %entry					; branch accordingly
+invalid:
+	ret i32 -1
+
+entry:
+	%middle.index = alloca i32					; allocate space for middle element index	
+	%middle = udiv i32 %n, 2					; compute middle index for binary search
+	store i32 %middle, i32* %middle.index		; store middle element index number
+
+	%middle.value.pointer = getelementptr i32* %tab, i32 %middle	; get pointer to middle value in array
+	%middle.value = load i32* %middle.value.pointer					; get middle value
+
+	%cmp = icmp eq i32 %middle.value, %k		; compare middle value with search key for equality
+	br i1 %cmp, label %return, label %search	; return if equal, otherwise branch
+
+search:
+	%tmp.index = load i32* %middle.index		; load middle index number
+	%tmp.pointer = getelementptr i32* %tab, i32 %tmp.index	; get pointer to element in array
+	%tmp.value = load i32* %tmp.pointer			; load value from array
+
+	%cmp.search = icmp ule i32 %k, %tmp.value	; check if search key is less than or equal to middle value
+	br i1 %cmp.search, label %lte, label %gt	; branch to lte ; otherwise, branch to gt
+
+; if key is less than or equal to middle value, it will be in the bottom half of the (sorted) array
+lte:
+	%lte.index = load i32* %middle.index		; load middle index number
+	%lte.index.new = sub i32 %lte.index, 1		; divide index by two to get new index
+	store i32 %lte.index.new, i32* %middle.index; store new index in %middle
+	
+	%lte.pointer = getelementptr i32* %tab, i32 %lte.index.new 	; get value pointer from array
+	%lte.value = load i32* %lte.pointer			; get value from array
+	%cmp.lte = icmp eq i32 %lte.value, %k		; check if value is equal to search key
+	br i1 %cmp.lte, label %return, label %search; if equal, return; otherwise, search again	
+
+; if key is greater than the middle value, it will be in the upper half of the (sorted) array
+gt:
+	%gt.index = load i32* %middle.index			; load middle index number
+	%gt.index.new = add i32 %gt.index, 1		; add index number to # of elements in array
+	store i32 %gt.index.new, i32* %middle.index	; store new value
+
+	%gt.pointer = getelementptr i32* %tab, i32 %gt.index.new	; get value pointer from array
+	%gt.value = load i32* %gt.pointer			; get value from array
+	%cmp.gt = icmp eq i32 %gt.value, %k			; check if value is equal to the search key
+	br i1 %cmp.gt, label %return, label %search	; if equal, return; otherwise, search again
+	
+return:
+	%result.index = load i32* %middle.index		; load index of middle value in array
+	%result.pointer = getelementptr i32* %tab, i32 %result.index	; load middle value pointer
+	%result = load i32* %result.pointer			; load middle value
+	ret i32 %result.index
+}
+
+define i1 @validateKey(i32* %arr, i32 %size, i32 %key) {
+	%low.pointer = getelementptr i32* %arr, i32 0
+	%high.index = sub i32 %size, 1
+	%high.pointer = getelementptr i32* %arr, i32 %high.index
+	%low = load i32* %low.pointer
+	%high = load i32* %high.pointer
+
+	%low.check = icmp ult i32 %key, %low	; check if key is less than lowest value
+	%high.check = icmp ugt i32 %key, %high	; check if key is greater than highest value
+
+	%cond = add i1 %low.check, %high.check	; add them together, will be 0 if valid, or 1 if invalid
+	ret i1 %cond
+}
+
+define i32 @main() {
+       %t0 = bitcast [10 x i32]* @data to i32*
+       %t1 = call i32 @binSearch(i32* %t0,i32 10,i32 14)
+       %t2 = call i32(i8*,...)* @printf(i8* bitcast ([9 x i8]* @msg to i8*),i32 %t1)
+       ret i32 %t1
+}

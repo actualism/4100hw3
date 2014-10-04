@@ -1,0 +1,14 @@
+
+	call void @initPair(%AIPair* %aip.allocated, i32 50)
+
+	%a.ptr = getelementptr [50 x i32]* %a, i32 0, i32 0		; get pointer to A 
+	%b.ptr = getelementptr [50 x i32]* %b, i32 0, i32 0		; get pointer to B
+
+	%aip.allocated.pointer = getelementptr %AIPair* %aip.allocated
+
+	%aip = load %AIPair* %aip.allocated.pointer					; load allocated memory
+	%a.insert = insertvalue %AIPair %aip, i32* %a.ptr, 0	; store a in first part
+	%b.insert = insertvalue %AIPair %aip, i32* %b.ptr, 1	; store b in second part
+
+	
+	;call void @printPair(%AIPair* %aip.allocated, i32 50)
